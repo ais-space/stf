@@ -1,0 +1,1143 @@
+Context
+    DocumentVersion: 0.1.0
+    GrammarVersion: 1.0.1
+    Language: en
+
+Page
+    Type: Page
+    Role: Content
+    Purpose: Full normative specification of the Semantic Text Format (STF) core — the format-independent layer. This document is written in STF; it is both the specification and a conformant STF document demonstrating the format it defines.
+    STFSyntax
+        Type: Section
+        Role: Content
+        Caption: 2. STF — Semantic Text Format (SYNTAX)
+
+        Text
+            Content: STF is a text format for semantic representation. It is the concrete syntax of the format — the "how to write and read" layer. STF is intentionally designed to be directly interpretable by contemporary language models without task-specific training, fine-tuning, or system prompts. At the same time, it is a formal grammar that can be parsed deterministically by a machine. These two properties are complementary — the parser consumes syntax; the consumer (human or agent) consumes semantics.
+
+        Text
+            Content: STF is defined on two levels. Lexical grammar defines valid characters and tokens — what STF is made of. Syntactic grammar defines structural rules and hierarchy — how tokens form a document. Semantic interpretation is defined in §3.
+
+        Text
+            Content: A conformant implementation separates parsing from semantic validation. The Parser consumes STF bytes and produces an AST (Abstract Syntax Tree). It checks lexical and syntactic rules only. The Semantic Validator consumes the AST and checks semantic constraints: required objects, Id uniqueness, knowledge zone boundaries, Origin privilege, duplicate properties, and other rules defined in §3-§4. A document that passes the Parser but fails the Validator is syntactically valid STF but semantically invalid. Implementations MUST distinguish SyntaxError (parser) from SemanticError (validator).
+
+        CanonicalSerialization
+            Type: Section
+            Role: Content
+            Caption: 2.0 Canonical Serialization
+
+            Text
+                Content: The canonical STF serialization is: UTF-8 encoding without BOM, LF (U+000A) line endings, 4-space indentation using U+0020 only, no trailing whitespace on any line, property order is semantic-free (any order is valid), final newline required. NFC Unicode normalization is RECOMMENDED. NFD and other normalization forms SHOULD be accepted by parsers. UTF-8 BOM (U+FEFF) at the start of the document MUST be rejected.
+
+            Text
+                Content: Before parsing, a conformant parser MUST normalize CRLF (backslash-r backslash-n) sequences to LF (backslash-n). A bare backslash-r not followed by backslash-n is treated as a regular character. STF parser limits: maximum property line length 8192 bytes (8 KiB), maximum nesting depth 16 levels. Implementations MUST reject documents exceeding these limits. STF does NOT support escape sequences within property values — the sequences backslash-n, backslash-t, backslash-backslash, backslash-uXXXX are interpreted as literal characters. For multi-line content, use nested Text or Content objects.
+
+        LexicalGrammar
+            Type: Section
+            Role: Content
+            Caption: 2.1 Lexical Grammar
+
+            CharacterClasses
+                Type: Section
+                Role: Content
+                Caption: 2.1.1 Character Classes
+
+                Production
+                    Type: Text
+                    Caption: UPPER_ALPHA
+                    Content: "A" | "B" | ... | "Z"
+
+                Production
+                    Type: Text
+                    Caption: LOWER_ALPHA
+                    Content: "a" | "b" | ... | "z"
+
+                Production
+                    Type: Text
+                    Caption: ALPHA
+                    Content: UPPER_ALPHA | LOWER_ALPHA
+
+                Production
+                    Type: Text
+                    Caption: DIGIT
+                    Content: "0" | "1" | ... | "9"
+
+                Production
+                    Type: Text
+                    Caption: UNDERSCORE
+                    Content: "_"
+
+                Production
+                    Type: Text
+                    Caption: DASH
+                    Content: "-"
+
+                Production
+                    Type: Text
+                    Caption: DOT
+                    Content: "."
+
+                Production
+                    Type: Text
+                    Caption: COLON
+                    Content: ":"
+
+                Production
+                    Type: Text
+                    Caption: SPACE
+                    Content: " "
+
+                Production
+                    Type: Text
+                    Caption: NEWLINE
+                    Content: "backslash-n"
+
+                Production
+                    Type: Text
+                    Caption: TAB
+                    Content: "backslash-t" — forbidden in indentation (see §2.1.4)
+
+            ObjectName
+                Type: Section
+                Role: Content
+                Caption: 2.1.2 Object Name
+
+                Text
+                    Content: An ObjectName identifies a structural node in the STF document. It appears at the start of a line at a given indentation depth, with no ": " separator following it (see §2.2.3 for disambiguation).
+
+                Production
+                    Type: Text
+                    Caption: object_name
+                    Content: UPPER_ALPHA { ALPHA | DIGIT | UNDERSCORE }
+
+                Text
+                    Content: Valid examples: Context, Page, Article, NavigationMenu, Message_1, UserProfile, CommentEntry, NextPage, Notice, LoginForm, LoadMoreButton.
+
+                Text
+                    Content: Invalid examples: context (does not start with uppercase), 2Factor (does not start with a letter), My-Object (dash not allowed), Two Words (space not allowed).
+
+                Text
+                    Content: ObjectName is used as a human-readable structural identifier in the STF document, a navigation anchor within the document tree, and the target in action requests for objects with Id (see §3.4). Maximum length: 256 characters. Implementations MUST reject documents containing ObjectNames exceeding this limit.
+
+            PropertyKey
+                Type: Section
+                Role: Content
+                Caption: 2.1.3 Property Key
+
+                Text
+                    Content: A PropertyKey labels a key-value pair within an object. Standard keys are pure PascalCase without underscores. Vendor keys use reverse-domain prefix to prevent collisions.
+
+                Production
+                    Type: Text
+                    Caption: property_key
+                    Content: standard_key | vendor_key
+
+                Production
+                    Type: Text
+                    Caption: standard_key
+                    Content: UPPER_ALPHA { ALPHA | DIGIT } (* Pure PascalCase, no underscores. Any PascalCase token is a grammatically valid property key. The standard keys defined by this specification are listed in §3.2. Unknown PascalCase keys are accepted by the parser and handled per §5.2 Unknown Extensions. *)
+
+                Production
+                    Type: Text
+                    Caption: vendor_key
+                    Content: reverse_domain "." UPPER_ALPHA { ALPHA | DIGIT } (* com.example.CustomField *)
+
+                Production
+                    Type: Text
+                    Caption: reverse_domain
+                    Content: LOWER_ALPHA { LOWER_ALPHA | DIGIT } { "." LOWER_ALPHA { LOWER_ALPHA | DIGIT } }
+
+                Text
+                    Content: Difference from ObjectName: standard property keys do NOT contain underscores (pure PascalCase — MinLength, not Min_Length). A property key MUST be followed by ": " (colon-space) and a value (§2.2.3).
+
+            Indentation
+                Type: Section
+                Role: Content
+                Caption: 2.1.4 Indentation
+
+                Text
+                    Content: STF is indentation-sensitive. Hierarchy is determined by leading whitespace.
+
+                Production
+                    Type: Text
+                    Caption: indent_unit
+                    Content: 4 * SPACE (* exactly 4 spaces *)
+
+                Production
+                    Type: Text
+                    Caption: indent_depth
+                    Content: indent_unit { indent_unit } (* 0, 4, 8, 12, ... spaces *)
+
+                Rule
+                    Type: Text
+                    Caption: Spaces only
+                    Content: Only space characters (U+0020) are valid for indentation. TAB in indentation is a syntax error.
+
+                Rule
+                    Type: Text
+                    Caption: Multiple of 4
+                    Content: Indentation MUST be a multiple of 4.
+
+                Rule
+                    Type: Text
+                    Caption: Depth
+                    Content: Depth = leading_spaces / 4.
+
+                Rule
+                    Type: Text
+                    Caption: Decreasing indentation
+                    Content: Decreasing indentation by N levels closes N parent scopes.
+
+                Rule
+                    Type: Text
+                    Caption: Increasing indentation
+                    Content: Increasing indentation by more than 1 level (skipping a depth) without an intermediate object is a syntax error.
+
+            PropertyValue
+                Type: Section
+                Role: Content
+                Caption: 2.1.5 Property Value
+
+                Production
+                    Type: Text
+                    Caption: CHAR
+                    Content: ? any Unicode scalar value (see §2.3.7 for characters that MUST be stripped) ?
+
+                Production
+                    Type: Text
+                    Caption: property_value
+                    Content: { CHAR - NEWLINE } (* any characters except newline *)
+
+                Rule
+                    Type: Text
+                    Caption: Colon in value
+                    Content: Colon is valid inside a value. The parser splits Key: Value on the FIRST occurrence of ": " (colon followed by space). All subsequent text, including additional colons, is the value.
+
+                Rule
+                    Type: Text
+                    Caption: Comma in value
+                    Content: The ", " (comma-space) sequence has no special meaning at the syntactic level. The parser always returns the raw property value as a single string. List interpretation (splitting by ", ") is performed by the semantic layer. Properties semantically defined as lists are split at the semantic validation stage. For all other properties, ", " is literal text. Values in list-typed properties MUST NOT contain the sequence ", ". This is a known limitation: option values like "New York, NY" are not representable. For such cases, use individual ListItem objects instead of a list-valued property.
+
+                Rule
+                    Type: Text
+                    Caption: Newline terminates value
+                    Content: NEWLINE always terminates the value. Multi-line values are not supported.
+
+                Rule
+                    Type: Text
+                    Caption: Whitespace trimming
+                    Content: Leading and trailing whitespace is trimmed from values.
+
+                Rule
+                    Type: Text
+                    Caption: Empty value
+                    Content: Key: with nothing after the colon (end of line immediately after ":") stores an empty string as the property value. This is distinct from the property being absent — an absent property means unknown or not applicable, while an empty value means explicitly empty. The string (none) has no special meaning — it is a literal value like any other.
+
+            BlankLines
+                Type: Section
+                Role: Content
+                Caption: 2.1.6 Blank Lines
+
+                Production
+                    Type: Text
+                    Caption: blank_line
+                    Content: NEWLINE
+
+                Text
+                    Content: Blank line at depth 0 separates top-level objects. Blank line at depth > 0 is IGNORED by the parser — does not change structure. Permitted in the current grammar. Rationale: a self-hosting specification contains blank lines between objects for readability. A specification MUST be valid under its own grammar.
+
+            Comments
+                Type: Section
+                Role: Content
+                Caption: 2.1.7 Comments
+
+                Text
+                    Content: STF has no comment syntax. Any line that does not match a grammar rule is a syntax error. Use the Purpose or Description properties for human-readable explanations.
+
+        SyntacticGrammar
+            Type: Section
+            Role: Content
+            Caption: 2.2 Syntactic Grammar
+
+            EBNF
+                Type: Section
+                Role: Content
+                Caption: 2.2.1 EBNF
+
+                Text
+                    Content: The indent(n) notation represents n * 4 space characters. Depth is computed as leading_spaces / 4.
+
+                Production
+                    Type: Text
+                    Caption: document
+                    Content: { blank_line | top_level_object }
+
+                Production
+                    Type: Text
+                    Caption: top_level_object
+                    Content: object(depth=0)
+
+                Production
+                    Type: Text
+                    Caption: object(d)
+                    Content: indent(d) object_name NEWLINE { blank_line | property_or_object(d+1) }
+
+                Production
+                    Type: Text
+                    Caption: property_or_object(d)
+                    Content: property(d) | object(d)
+
+                Production
+                    Type: Text
+                    Caption: property(d)
+                    Content: indent(d) property_key ":" [ " " property_value ] NEWLINE (* Empty value: Key: at end of line stores empty string *)
+
+            ParsingAlgorithm
+                Type: Section
+                Role: Content
+                Caption: 2.2.2 Indentation-Sensitive Parsing Algorithm
+
+                Text
+                    Content: The EBNF defines structural relationships. The following algorithm defines how indentation determines hierarchy. Parser state: stack of (depth, object_name) — open object stack.
+
+                Step
+                    Type: Text
+                    Caption: Step 1 — Count indentation
+                    Content: For each non-blank line L, count leading spaces → indent_spaces(L).
+
+                Step
+                    Type: Text
+                    Caption: Step 2 — Validate indentation
+                    Content: Verify indent_spaces % 4 == 0. If not → SYNTAX ERROR.
+
+                Step
+                    Type: Text
+                    Caption: Step 3 — Compute depth
+                    Content: depth = indent_spaces / 4.
+
+                Step
+                    Type: Text
+                    Caption: Step 4 — Close deeper objects
+                    Content: Pop objects from the stack while stack is not empty AND stack.top.depth >= depth. These objects are now closed. If depth == 0 and stack is empty: current object is undefined (top-level context).
+
+                Step
+                    Type: Text
+                    Caption: Step 5 — Identify line type
+                    Content: If the trimmed line L matches the pattern of a property_key followed by ":" (with optional ": " + value): this is a PROPERTY. Extract key (text before ":"), validate against property_key grammar (§2.1.3). If key is not a valid property_key → SYNTAX ERROR. Value is the text after ": " (colon-space), or empty string if only ":" is present. Verify stack is not empty AND depth == stack.top.depth + 1. If not → SYNTAX ERROR. Add property to stack.top object. Else if L matches object_name grammar (starts with uppercase, contains only [A-Za-z0-9_]): this is an OBJECT. Else → SYNTAX ERROR: "Unrecognized line".
+
+                Step
+                    Type: Text
+                    Caption: Step 6 — Place object
+                    Content: For an OBJECT at depth d: if stack is empty and d == 0: push the top-level object onto the stack. Else if stack is not empty and d == stack.top.depth + 1: push as child of stack.top. Else if stack is not empty and d == stack.top.depth: the previous object at this depth was already closed in Step 4; push as a new peer. Else → SYNTAX ERROR: "Object at wrong depth".
+
+                Text
+                    Content: After processing all lines, any remaining objects on the stack are closed implicitly (end of document).
+
+                Text
+                    Content: This algorithm correctly handles interleaving of properties and child objects. When a property at depth d+1 appears after a child object at depth d+1, Step 4 closes the child (stack.top.depth >= d+1), and Step 5 assigns the property to the parent. This matches the EBNF production object(d) = indent(d) object_name NEWLINE { blank_line | property_or_object(d+1) } which allows any order.
+
+            Disambiguation
+                Type: Section
+                Role: Content
+                Caption: 2.2.3 Disambiguation: Object vs Property
+
+                Text
+                    Content: The critical disambiguation rule — a line containing ":" followed by end-of-line or a space is always a property. A line without ":" that matches object_name is always an object.
+
+                Example
+                    Type: Text
+                    Caption: Object example
+                    Content: "    CommentEntry" — OBJECT (no ": ")
+
+                Example
+                    Type: Text
+                    Caption: Property example
+                    Content: "    Type: CommentEntry" — PROPERTY (has ": ")
+
+                Text
+                    Content: No lookahead or contextual disambiguation is required — the decision is made at the single-line level based on the presence of ": ". Consequence: ObjectName MUST NOT contain ": " (the grammar already guarantees this). Property values MAY contain ": ".
+
+            MultiLineValues
+                Type: Section
+                Role: Content
+                Caption: 2.2.4 Multi-line Values
+
+                Text
+                    Content: STF does NOT support multi-line property values through continuation lines — a property value always ends at the newline. For multi-line content, use one of two patterns: (1) a nested object of Type: Text with a Content property for the text body, (2) multiple Text objects for paragraphs. For long content such as code blocks or multi-paragraph text, the RECOMMENDED pattern is a sequence of Text objects, one per paragraph.
+
+                Example
+                    Type: Text
+                    Caption: Multi-paragraph content
+                    Content: "Section backslash-n    Type: Section backslash-n    Role: Content backslash-n    Text backslash-n        Type: Text backslash-n        Content: First paragraph. backslash-n    Text backslash-n        Type: Text backslash-n        Content: Second paragraph."
+
+            TopLevelObjects
+                Type: Section
+                Role: Content
+                Caption: 2.2.5 Top-Level Objects
+
+                Text
+                    Content: A valid STF document has the following top-level (depth=0) objects.
+
+                RequiredObject
+                    Type: Text
+                    Caption: Context
+                    Content: Required — exactly one. Document metadata (see §6.2).
+
+                RequiredObject
+                    Type: Text
+                    Caption: Page
+                    Content: Required — exactly one. Document content.
+
+                Text
+                    Content: The order of top-level objects is not prescribed, but the recommended order is Context, Page. An application vocabulary MAY define additional top-level objects (for example a protocol layer MAY add Events, Application, or Footer) — these are extensions, not part of the STF core.
+
+        Escaping
+            Type: Section
+            Role: Content
+            Caption: 2.3 Escaping and Special Values
+
+            ColonInValues
+                Type: Section
+                Role: Content
+                Caption: 2.3.1 Colon in Values
+
+                Text
+                    Content: The parser splits Key: Value on the FIRST occurrence of ": " (colon followed by space). A colon appearing later in the value is part of the value. Example: "Created: 2026-08-08T09:25:51.860593+00:00" — Key="Created", Value="2026-08-08T09:25:51.860593+00:00". A line containing only the key followed by ":" and nothing else (Key: at end of line) stores an empty string value — see §2.1.5 Empty value rule.
+
+            CommaInValues
+                Type: Section
+                Role: Content
+                Caption: 2.3.2 Comma in List Values
+
+                Text
+                    Content: List values use ", " (comma-space) as separator. A comma without a following space is part of the value. "Options: en, ru, de, fr" is four values. "Options: New York, USA, Paris" is three values — space in value is OK. "Content: Hello, world" is a single value — no ", " sequence. Values in option lists MUST NOT contain the sequence ", ".
+
+            BooleanValues
+                Type: Section
+                Role: Content
+                Caption: 2.3.3 Boolean Values
+
+                Text
+                    Content: Boolean values MUST be lowercase true or false exclusively. True, FALSE, 1, 0, yes, no are NOT valid boolean values. Parsers encountering invalid boolean values SHOULD treat them as strings rather than guessing intent.
+
+            NumberValues
+                Type: Section
+                Role: Content
+                Caption: 2.3.4 Number Values
+
+                Text
+                    Content: Use dot (.) as decimal separator. Thousands separators, locale-specific formatting, and scientific notation are NOT supported. Valid: 42, 3.14, -10. Invalid: 1,000, 3,14, 1.5e10.
+
+            DateTimeValues
+                Type: Section
+                Role: Content
+                Caption: 2.3.5 Date and DateTime Values
+
+                Text
+                    Content: DateTime values MUST use ISO 8601 / RFC 3339 format in UTC. Both the Z suffix (2026-08-07T12:00:00Z) and +00:00 offset (2026-08-07T12:00:00+00:00) are valid and equivalent representations of UTC. Date-only values use ISO 8601: 2026-08-07. A Display property MAY provide a localized rendering — Display: Aug 7, 2026 12:00.
+
+            EmptyValues
+                Type: Section
+                Role: Content
+                Caption: 2.3.6 Empty and Absent Values
+
+                Text
+                    Content: Property absent from object — value is unknown or not applicable. Key: with nothing after colon or only whitespace — value is explicitly empty. The string (none) as a value is a literal string with no special meaning.
+
+            Unicode
+                Type: Section
+                Role: Content
+                Caption: 2.3.7 Unicode Control Characters
+
+                Text
+                    Content: The following Unicode characters MUST be stripped before output: C0 control characters (U+0000-U+001F except space U+0020), C1 control characters (U+007F-U+009F), bidi override characters (U+202A-U+202E), bidi isolate characters (U+2066-U+2069). STF does not support escape sequences (§2.0). Zero-width joiners (U+200D), zero-width non-joiners (U+200C), and variation selectors (U+FE0F) used in emoji sequences MUST be preserved.
+
+        DuplicateProperties
+            Type: Section
+            Role: Content
+            Caption: 2.4 Duplicate Properties
+
+            Text
+                Content: An object MUST NOT contain multiple properties with the same key. Duplicate standard properties (e.g. two Type properties on the same object) is a SemanticError. The parser accepts the document (it is syntactically valid), but the semantic validator MUST reject it. For vendor properties, the same rule applies — duplicate vendor keys on the same object are a SemanticError.
+
+        ErrorRecovery
+            Type: Section
+            Role: Content
+            Caption: 2.5 Error Recovery
+
+            Text
+                Content: A parser encountering a syntax error MUST stop parsing the current document and return an error indicating the line number and reason. A parser MUST NOT attempt to recover and continue parsing, ignore errors and return a partial result, or guess the author's intent.
+
+            Text
+                Content: Rationale: STF is a machine-to-machine format. Partial recovery opens attack vectors through crafted malformed documents. Strict rejection is safer and simpler.
+    ObjectModel
+        Type: Section
+        Role: Content
+        Caption: 3. Object Model (SEMANTICS)
+
+        Text
+            Content: The Object Model defines the meaning of structural elements in STF — what Types, Roles, States, and Actions signify, and how they relate to each other. This layer answers the question: "What does this STF document mean?" The core object model is standardized — all conformant implementations MUST interpret these elements consistently. Application vocabularies MAY extend the model with their own Types, Roles, and Actions (§5), but MUST NOT redefine the semantics of core elements.
+
+        SemanticModel
+            Type: Section
+            Role: Content
+            Caption: 3.1 The Semantic Model
+
+            ThreeLayerIdentification
+                Type: Section
+                Role: Content
+                Caption: 3.1.1 Three-Layer Object Identification
+
+                Text
+                    Content: Every object in STF has three identifiers serving different purposes. ObjectName is the human-readable structural name in the document (e.g. Article, Message_1). Type is the structural classification — what kind of object (Card, Widget, Field, UserContent). Role is the semantic purpose — why this object exists (ArticleBody, SubmitAction, EmailField).
+
+                Text
+                    Content: ObjectName is the local identifier within the document. It may be descriptive (MainNavigation), enumerated (Message_1), or application-specific (ProfileCardPro). ObjectName is always present (structure). It may be used for navigation within the document tree but is NOT the action target — use Id for that.
+
+                Text
+                    Content: Type answers "what is this object structurally?" Type determines which properties and children are expected. Role answers "why does this object exist?" Roles may be core or application-defined. A Card (type) can be a ProfileCard or SettingsCard (roles) — same structure, different purpose.
+
+                Text
+                    Content: ObjectName is NOT Type or Role. An object named CommentEntry may have Type: UserContent and Role: CommentItem. The ObjectName is the instance identifier; Type and Role are classifications. Requirements: ObjectName is REQUIRED on every object. Id is REQUIRED on any object with Actions (§3.4). Type is RECOMMENDED; when absent, interpretation is context-dependent. Role is OPTIONAL. Implementations SHOULD set Type on all objects.
+
+            CoreConcepts
+                Type: Section
+                Role: Content
+                Caption: 3.1.2 Core Semantic Concepts
+
+                Concept
+                    Type: Text
+                    Caption: Object
+                    Content: A named structural unit with Type, Role, properties, and children.
+
+                Concept
+                    Type: Text
+                    Caption: Property
+                    Content: A key-value pair within an object.
+
+                Concept
+                    Type: Text
+                    Caption: Action
+                    Content: A declarative label of an available interaction. Not executable code — a semantic label indicating what a consumer can do. The specific action vocabulary is defined by an application vocabulary (§5); the core only defines that Actions is a property whose values are action names.
+
+                Concept
+                    Type: Text
+                    Caption: Intent
+                    Content: A consumer's request to perform an action. One intent = one action on one target. The binding of Intents to Actions (transport, addressing) is defined by an application vocabulary, not by the STF core.
+
+                Concept
+                    Type: Text
+                    Caption: Capability
+                    Content: An application-defined name describing what a consumer can accomplish on this page. Used for orientation only — not an API contract.
+
+                Concept
+                    Type: Text
+                    Caption: Event
+                    Content: A notification about a state change, delivered by an application vocabulary that defines events. The core defines no event transport; it only reserves the structural space for event objects.
+
+        StandardProperties
+            Type: Section
+            Role: Content
+            Caption: 3.2 Standard Properties
+
+            Text
+                Content: The STF core defines a minimal, application-neutral set of standard properties. An application vocabulary MAY add further properties (§5). Unknown PascalCase keys are accepted by the parser and handled per §5.2 Unknown Extensions.
+
+            PropertyReference
+                Type: Section
+                Role: Content
+                Caption: 3.2.1 Property Reference
+
+                PropertyEntry
+                    Type: Text
+                    Caption: Type
+                    Content: Structural classification. Core values are application-neutral; an application vocabulary defines the concrete set (e.g. Card, Widget, Field, Section, Document). Values are PascalCase object types.
+
+                PropertyEntry
+                    Type: Text
+                    Caption: Role
+                    Content: Semantic purpose. Core is application-neutral; an application vocabulary defines concrete roles (e.g. SubmitAction, ProfileCard). Values are PascalCase.
+
+                PropertyEntry
+                    Type: Text
+                    Caption: Id
+                    Content: Stable identifier for action targets. REQUIRED on any object with Actions. Grammar: [A-Za-z][A-Za-z0-9_-]{0,127}. Unique within the STF document.
+
+                PropertyEntry
+                    Type: Text
+                    Caption: State
+                    Content: Current state. Core is application-neutral; an application vocabulary defines concrete states (e.g. Open, Closed, Active, Disabled). Multiple states separated by comma-space.
+
+                PropertyEntry
+                    Type: Text
+                    Caption: Purpose
+                    Content: Why the object exists — its semantic purpose. For consumers. Descriptive metadata, NOT a command or instruction.
+
+                PropertyEntry
+                    Type: Text
+                    Caption: Content
+                    Content: Primary displayable text — the main content of a section or element (heading, paragraph, message body). For humans and consumers.
+
+                PropertyEntry
+                    Type: Text
+                    Caption: Caption
+                    Content: Short display label. For human UI. Field label, short UI label.
+
+                PropertyEntry
+                    Type: Text
+                    Caption: Description
+                    Content: Auxiliary explanatory text — subtitle, caption, tooltip, or context-setting information. For humans and consumers. Not the primary content.
+
+                PropertyEntry
+                    Type: Text
+                    Caption: Hint
+                    Content: Usage hint. For human UI. Input assistance, usage guidance.
+
+                PropertyEntry
+                    Type: Text
+                    Caption: Placeholder
+                    Content: Example expected value for Input fields.
+
+                PropertyEntry
+                    Type: Text
+                    Caption: Required
+                    Content: Whether a field is required for Input. Boolean: true or false.
+
+                PropertyEntry
+                    Type: Text
+                    Caption: Format
+                    Content: Data type hint for values. Values: string, boolean, number, datetime, url, email, integer, date, uuid, enum.
+
+                PropertyEntry
+                    Type: Text
+                    Caption: Origin
+                    Content: Data provenance (§4 of the Trust Model). Values: Application, Backend, Generated, Unknown, Agent, Human, External.
+
+                PropertyEntry
+                    Type: Text
+                    Caption: Actions
+                    Content: Available actions. Values are action names defined by the application vocabulary. An object with Actions MUST have an Id (§3.4).
+
+                PropertyEntry
+                    Type: Text
+                    Caption: Expects
+                    Content: Declares the parameters an action requires. A structured child object (not a scalar property); see §3.4.
+
+                PropertyEntry
+                    Type: Text
+                    Caption: Current
+                    Content: Current value for selectors. Example: en, light.
+
+                PropertyEntry
+                    Type: Text
+                    Caption: Options
+                    Content: Allowed values, comma-separated. Example: en, ru, de, fr.
+
+                PropertyEntry
+                    Type: Text
+                    Caption: Value
+                    Content: Current value after input for Input fields.
+
+                PropertyEntry
+                    Type: Text
+                    Caption: Error
+                    Content: Error message after validation failure.
+
+                PropertyEntry
+                    Type: Text
+                    Caption: Message
+                    Content: Message content for UserContent objects.
+
+                PropertyEntry
+                    Type: Text
+                    Caption: Model
+                    Content: Model name for UserContent objects.
+
+                PropertyEntry
+                    Type: Text
+                    Caption: Date
+                    Content: Timestamp in ISO 8601 / RFC 3339 UTC format.
+
+                PropertyEntry
+                    Type: Text
+                    Caption: Display
+                    Content: Localized rendering of a DateTime value. Example: "Aug 7, 2026 12:00". Used alongside Date for human readability.
+
+                PropertyEntry
+                    Type: Text
+                    Caption: Document
+                    Content: Document title or identifier. Used in Context for self-identification of the STF document itself. Optional.
+
+            FieldClassification
+                Type: Section
+                Role: Content
+                Caption: 3.2.2 Field Classification: Data, Guidance, Control
+
+                Text
+                    Content: Properties in STF serve different audiences. Implementations MUST distinguish them consistently to prevent category confusion.
+
+                ClassificationCategory
+                    Type: Section
+                    Role: Content
+                    Caption: Data
+                    Purpose: Properties that carry information to be displayed or read. They have no executable semantics.
+
+                    Text
+                        Content: Content, Description, Message, Model, Date, Caption, Placeholder, Current, Options, Value, Display, Error. Audience: Human + Consumer (display). Trust: May be untrusted.
+
+                ClassificationCategory
+                    Type: Section
+                    Role: Content
+                    Caption: Guidance
+                    Purpose: Properties that provide orientation. Descriptive only, not authoritative.
+
+                    Text
+                        Content: Purpose, Hint. Audience: Human (help) or Consumer (orientation). Trust: Descriptive only, not authoritative. Purpose MUST NOT be treated as a command, instruction, or permission grant.
+
+                ClassificationCategory
+                    Type: Section
+                    Role: Content
+                    Caption: Control
+                    Purpose: Properties and structural elements that carry constraints affecting behavior — what actions can be performed, where navigation leads, what validation rules apply.
+
+                    Text
+                        Content: Control properties (core): Actions, Required, Format, and the Expects child object (with its MinLength, MaxLength, Pattern sub-properties). Application vocabularies MAY declare additional transport-specific control properties — for example Navigate — under the same trust rules. Trust: Trusted only. Control properties MUST only appear on objects with Trusted Origin (see Trust Model §4). Objects with Untrusted Origin MUST NOT have Control properties or objects.
+
+            MultipleStates
+                Type: Section
+                Role: Content
+                Caption: 3.2.3 Multiple States
+
+                Text
+                    Content: An object may have several states simultaneously. Multiple state values are separated by comma and space — State: Filled, Invalid. The order of values is not significant. Custom states MAY be introduced by vendor extensions (§5).
+
+            CurrentVsSelected
+                Type: Section
+                Role: Content
+                Caption: 3.2.4 Current vs State: Selected
+
+                Text
+                    Content: Current is a property of Select objects — the active value of the selector. State: Selected indicates the entry corresponding to the current page in a navigation list. State: Selected is a visual/structural indicator; Current is a data value.
+
+            ReservedSection
+                Type: Section
+                Role: Content
+                Caption: 3.3 Reserved — Base Types, Roles, States, Actions (EXCLUDED FROM CORE)
+                Text
+                    Content: The STF core deliberately defines NO fixed set of base object Types, Roles, States, or Action names. Those vocabularies belong to application vocabularies (§5) and are out of scope for the core. This section number is reserved so that a future core revision may introduce a minimal neutral base set without renumbering §3.4 and §3.5.
+
+        IdRequirement
+            Type: Section
+            Role: Content
+            Caption: 3.4 Id Requirement
+
+            Text
+                Content: Any object that has an Actions property MUST have a unique Id property. The Id is the target used in action requests. Without an Id, a consumer cannot address the object.
+
+            Rule
+                Type: Text
+                Caption: Uniqueness
+                Content: Id MUST be unique within the current STF document. Two objects on the same page MUST NOT share the same Id. Ids MAY repeat across different documents.
+
+            Rule
+                Type: Text
+                Caption: Grammar
+                    Content: [A-Za-z][A-Za-z0-9_-]{0,127}. snake_case for interactive objects (nav_home, card_item, email_field), PascalCase for structural objects (MainNavigation, LanguageSelector). Note: Id grammar permits dash (-) and allows lowercase start — this is distinct from ObjectName grammar (§2.1.2) which requires uppercase start and prohibits dash. Id is a property value, not a structural node name.
+
+            Rule
+                Type: Text
+                Caption: Case sensitivity
+                Content: Id is case-sensitive. MainNavigation and mainnavigation are different identifiers.
+
+            Rule
+                Type: Text
+                Caption: Stability
+                Content: Id MUST be stable across reads for the same logical object. Id MUST NOT change after an action. The object's State or Value may change, but its Id remains constant.
+
+            Rule
+                Type: Text
+                Caption: Dynamic Ids
+                Content: Id MAY be dynamic (e.g. Message_1, Message_2) for enumerated content where the set of objects changes.
+
+            Expects
+                Type: Section
+                Role: Content
+                Caption: 3.5 Expects — Action Parameter Declaration
+
+                Text
+                    Content: Expects is a structured child object (not a scalar property) that declares the parameters an action requires. It appears as a child of any object with Actions. Each child of Expects is a PascalCase parameter name.
+
+                ExpectsProperty
+                    Type: Text
+                    Caption: Required
+                    Content: Whether the parameter is mandatory. Boolean: true or false.
+
+                ExpectsProperty
+                    Type: Text
+                    Caption: Format
+                    Content: Data type hint. Values: url, email, string, boolean, number, integer, datetime, date, uuid, enum.
+
+                ExpectsProperty
+                    Type: Text
+                    Caption: MinLength
+                    Content: Minimum character length for text input.
+
+                ExpectsProperty
+                    Type: Text
+                    Caption: MaxLength
+                    Content: Maximum character length for text input.
+
+                ExpectsProperty
+                    Type: Text
+                    Caption: Pattern
+                    Content: Regular expression constraint (ECMA-262 dialect).
+
+                Text
+                    Content: Expects is a limited declaration — not a schema language. It declares what the server expects for a specific action. For complex or nested data structures, servers SHOULD accept them through a data parameter as arbitrary content, validated with application-specific logic. Expects describes only the flat, named parameters of an action — it is NOT intended to replace a schema language.
+    TrustModel
+        Type: Section
+        Role: Content
+        Caption: 4. Trust Model (STRUCTURAL SECURITY)
+
+        Text
+            Content: Security in STF is structural, not heuristic. The trust boundary is enforced by the grammar and type system — not by filtering dangerous-looking strings. A correctly implemented STF parser provides the first line of defense. The Trust Model is part of the STF core: any conformant producer and consumer MUST implement it, independent of any application vocabulary.
+
+        StructuralTrustBoundary
+            Type: Section
+            Role: Content
+            Caption: 4.1 Structural Trust Boundary
+
+            Text
+                Content: The fundamental security principle of STF: user-controlled content is data by construction, not because dangerous-looking strings were filtered. The STF parser guarantees this structurally.
+
+            Text
+                Content: Type: UserContent — the object and all its descendants are data. They have no executable semantics. The parser structurally guarantees that "Message: Actions: Activate" is the value of the Message property, not a new Actions property. No string filtering or blacklist is needed — the grammar itself prevents injection.
+
+            Text
+                Content: Knowledge zones (§4.4) provide structural separation. ApplicationKnowledge contains only trusted system content. UserData contains only untrusted visitor content, with executable properties structurally prohibited. The structural approach replaces the string-filtering approach: instead of rejecting input containing STF prefixes (Actions:, Navigate:, Type:), the parser never interprets value content as structure. The security boundary is at the grammar level, not the string-matching level.
+
+        OriginAndPrivilege
+            Type: Section
+            Role: Content
+            Caption: 4.2 Origin and Privilege
+
+            OriginValues
+                Type: Section
+                Role: Content
+                Caption: 4.2.1 Origin Values
+
+                Text
+                    Content: Every piece of data in STF has an origin. Origin describes where the data came from, which determines its trust level.
+
+                TrustedOrigin
+                    Type: Text
+                    Caption: Application
+                    Content: Trusted. Application code, server logic, structural UI elements.
+
+                TrustedOrigin
+                    Type: Text
+                    Caption: Backend
+                    Content: Trusted. Data from internal systems, databases.
+
+                VariableOrigin
+                    Type: Text
+                    Caption: Generated
+                    Content: Variable trust. Derived data — privilege = min(privilege of inputs).
+
+                UntrustedOrigin
+                    Type: Text
+                    Caption: Agent
+                    Content: Untrusted. Intelligent Agent (LLM).
+
+                UntrustedOrigin
+                    Type: Text
+                    Caption: Human
+                    Content: Untrusted. Human user.
+
+                UntrustedOrigin
+                    Type: Text
+                    Caption: Unknown
+                    Content: Untrusted. Default when Origin is not explicitly set. Objects with Unknown Origin carry no privilege.
+
+                UntrustedOrigin
+                    Type: Text
+                    Caption: External
+                    Content: Untrusted. External source, third party.
+
+            OriginPropagation
+                Type: Section
+                Role: Content
+                Caption: 4.2.2 Origin Propagation
+
+                Text
+                    Content: Origin resolution determines the effective trust of an object. A base Origin is selected by the first applicable rule: (1) an explicit Origin property on the object, if present; (2) a type-specific default — Type: UserContent is always treated as untrusted: its effective Origin is normalized to External regardless of how the content was produced (Human, Agent, or External), and an explicit Origin on a UserContent object is ignored for trust purposes; (3) the Knowledge Zone default — objects inside UserData inherit the zone's untrusted Origin, objects inside ApplicationKnowledge inherit Application; (4) the global default — Unknown (Untrusted).
+
+                Text
+                    Content: Unknown carries no privilege. The global default is fail-closed: if a producer omits Origin, the object is treated as untrusted. Producers SHOULD explicitly set Origin on every object. The effective trust is the minimum of the base Origin's trust and the maximum trust of the containing zone (effective = min(base_trust, zone_max_trust)) — a zone MUST NOT be elevated above its own maximum, and it MAY only lower an object's trust. Consequently a UserContent object stays untrusted even inside ApplicationKnowledge, and an object with an explicit Trusted Origin inside UserData is downgraded to untrusted. This is what makes the structural trust boundary enforceable: control properties are decided by effective trust, never by a single asserted Origin.
+
+            PrivilegeLattice
+                Type: Section
+                Role: Content
+                Caption: 4.2.3 Privilege Lattice
+
+                Text
+                    Content: Trusted (privileged — may contain Control properties): Application, Backend, Generated (when all inputs are Trusted). Untrusted (unprivileged — may NOT contain Control properties): Unknown, Agent, Human, External, Generated (when any input is Untrusted).
+
+                Text
+                    Content: For Generated content, the privilege level is the minimum (most restrictive) of all semantically relevant inputs used to produce it. An input is any external or model-generated material used to construct the Generated object — including data that is summarized, translated, reformatted, or transformed. Generated content from purely Trusted inputs remains Trusted. If any input is Untrusted, the Generated output is Untrusted.
+
+            OriginSecurity
+                Type: Section
+                Role: Content
+                Caption: 4.2.4 Origin and Security
+
+                Text
+                    Content: Objects with Trusted Origin MAY carry Actions and other Control properties (including any transport-specific control properties defined by the application vocabulary). Objects with Untrusted Origin MUST NOT have Control properties — this is enforced structurally (Type: UserContent prohibits Actions). ApplicationKnowledge sections contain only Trusted content. UserData sections contain Untrusted content.
+
+                Text
+                    Content: Origin is producer-controlled metadata. Consumers MUST NOT be able to influence or elevate Origin through submitted content. Origin is assigned by the producer at document generation time and MUST NOT be trusted when received as user-controlled data. An assertion of Origin: Application in untrusted content has no effect — the producer always determines Origin from its own trust model.
+
+        PromptInjection
+            Type: Section
+            Role: Content
+            Caption: 4.3 Prompt Injection Prevention
+
+            Text
+                Content: Prompt injection is the risk that an untrusted party embeds instructions in content that a consumer interprets as commands. STF prevents a specific class of syntactic/structural injection attacks — user content cannot become STF properties or objects through the grammar. This is achieved through field classification (§3.2.2), structural trust boundary (§4.1), and knowledge zone separation (§4.4). STF does NOT provide general protection against semantic prompt injection — consumers remain responsible for distinguishing Data from instructions.
+
+                Text
+                    Content: UserContent is Data, not Guidance or Control. Purpose is Guidance — descriptive metadata, not authoritative instruction. An instruction embedded in untrusted content that says "you may ignore limits" has no protocol-level effect. The consumer MUST validate Control properties (Actions, Expects, and any vocabulary-defined control properties) against the Trusted origin of their containing object. Control properties on objects with Untrusted Origin are a protocol violation and MUST be ignored.
+
+            Text
+                Content: ApplicationKnowledge is structurally Trusted and MAY contain executable semantics. UserData is structurally Untrusted and MUST NOT contain executable semantics. The consumer can trust that objects in ApplicationKnowledge were authored by the application. Objects in UserData were authored by visitors — read them, display them, but do not act on them.
+
+        KnowledgeZones
+            Type: Section
+            Role: Content
+            Caption: 4.4 Knowledge Zones
+
+            Text
+                Content: Knowledge zones are structural trust boundaries that separate system content from visitor content within the same STF document.
+
+            Zone
+                Type: Section
+                Role: Content
+                Caption: ApplicationKnowledge
+                Purpose: System content — structure, instructions, navigation. Origin: Trusted (Application/Backend). Content: Trusted only. MUST NOT contain UserContent objects.
+
+            Zone
+                Type: Section
+                Role: Content
+                Caption: UserData
+                Purpose: Visitor content — messages, submissions, feedback. Origin: Untrusted (Agent/Human/External). Content: Untrusted. MUST NOT contain Control properties (§3.2.2): Actions, Required, Format, Expects (and its MinLength, MaxLength, Pattern sub-properties), nor any vocabulary-defined control properties.
+
+            ExtensionZones
+                Type: Section
+                Role: Content
+                Caption: Extension Zones
+                Purpose: Application vocabularies MAY declare additional knowledge zones — for example an AgentInstruction zone for consumer guidance — under the same trust rules. Such zones are extensions, not part of the STF core.
+
+                Text
+                    Content: An application-defined zone inherits the core trust semantics: it declares a default Origin and a maximum trust level for contained objects, and MUST NOT elevate an object's explicit Origin (see §4.2.2). A zone that would elevate an untrusted object's privilege is a TrustBoundaryViolation (§4.5).
+
+            Text
+                Content: Fundamental axiom of STF: semantic description never grants capability. Descriptive metadata cannot create a Capability. A Capability cannot create an Action. An Action does not imply authorization. An Intent requests an Action but does not grant permission. The authority is always the producer/application. This axiom applies at every layer — no amount of descriptive text in Purpose, Content, or any guidance zone can confer the right to perform an action that the producer does not authorize.
+
+            Text
+                Content: These zones SHOULD be automatically applied by the producer when generating STF. Producers MAY explicitly declare knowledge zones in the document structure for finer control.
+
+        ErrorTaxonomy
+            Type: Section
+            Role: Content
+            Caption: 4.5 Error Taxonomy
+
+            Text
+                Content: STF defines three distinct error categories. Implementations MUST distinguish them.
+
+            ErrorCategory
+                Type: Text
+                Caption: SyntaxError
+                Content: STF grammar violation. Detected by the parser. Examples: invalid indentation, malformed property, unrecognized line. A conformant parser MUST reject the document and report the line number and reason.
+
+            ErrorCategory
+                Type: Text
+                Caption: SemanticError
+                Content: Valid STF, but violates semantic constraints. Detected by the validator. Two contexts: (a) incoming request validation — the consumer's request fails semantic rules (unknown target, wrong state, etc.); (b) outgoing document validation — the producer detects it would generate semantically invalid STF (UserContent with Actions, duplicate properties, Control on Untrusted Origin), this is a producer implementation error, the producer MUST NOT emit the invalid document and MUST log the error internally. A conformant producer never exposes semantically invalid STF.
+
+            ErrorCategory
+                Type: Text
+                Caption: TrustBoundaryViolation
+                Content: Valid STF and valid semantics, but violates the structural trust boundary (§4) — Control properties on an Untrusted object, or a zone that would elevate an untrusted object's privilege. Detected by the validator. A conformant producer MUST NOT emit such a document. A conformant consumer MUST ignore the violating Control properties rather than act on them.
+    Extensions
+        Type: Section
+        Role: Content
+        Caption: 5. Extensions (APPLICATION VOCABULARIES)
+
+        Text
+            Content: No format can anticipate every future use case. STF provides a stable semantic core (Types, Roles, States, Actions, Origin, Knowledge Zones) while allowing application-defined extensions and vendor properties. An application vocabulary is a named set of additional Types, Roles, States, Actions, properties, and (optionally) transport bindings built on top of the STF core. SIL is one such application vocabulary.
+
+        ExtensibilityPrinciple
+            Type: Section
+            Role: Content
+            Caption: 5.1 Extensibility Principle
+
+            Text
+                Content: STF is intentionally extensible. Extensions MUST NOT redefine core semantics. A vendor extension MAY add new Types, Roles, States, Actions, and properties; it MUST NOT change the meaning of a core element (Type, Role, Id, State, Origin, Actions, Expects, or any property defined in §3.2). Where an extension needs behavior that overlaps a core element, it introduces a new name rather than reassigning an existing one.
+
+        UnknownExtensions
+            Type: Section
+            Role: Content
+            Caption: 5.2 Unknown Extensions
+
+            Text
+                Content: The STF parser accepts any PascalCase property key and any PascalCase ObjectName, even if unknown to the core (§2.1.3). Unknown elements are passed through by the parser. The semantic validator handles them per the consuming application vocabulary.
+
+            Rule
+                Type: Text
+                Caption: Unknown property
+                Content: An unknown standard_key (PascalCase) property is accepted by the parser. A conformant consumer that does not recognize it SHOULD preserve it and MUST NOT error solely on that basis. If the property is Control-class and appears on an Untrusted object, the Trust Model (§4) still applies.
+
+            Rule
+                Type: Text
+                Caption: Unknown type or role
+                Content: An unknown Type or Role value is accepted. A consumer that does not recognize it interprets the object structurally (by its properties and children) and MAY fall back to generic handling.
+
+        VendorProperties
+            Type: Section
+            Role: Content
+            Caption: 5.3 Vendor Properties
+
+            Text
+                Content: Vendor properties use a reverse-domain prefix to prevent collisions (§2.1.3). Example: com.example.CustomField. A vendor property is semantically equivalent to an unknown standard property for parsing purposes; the reverse-domain prefix namespaces it to its owner.
+
+            Rule
+                Type: Text
+                Caption: Vendor key grammar
+                Content: vendor_key = reverse_domain "." UPPER_ALPHA { ALPHA | DIGIT }. The reverse_domain is lowercase, dot-separated. Example: com.example.CustomField.
+
+            Rule
+                Type: Text
+                Caption: Vendor control properties
+                Content: A vendor Control-class property inherits the same trust rules as core Control properties (§3.2.2, §4): it MUST NOT appear on an Untrusted object.
+
+        VendorTypesAndRoles
+            Type: Section
+            Role: Content
+            Caption: 5.4 Vendor Types and Roles
+
+            Text
+                Content: Application vocabularies declare their Types and Roles with reverse-domain namespacing where collision is a risk, or with plain PascalCase names when the vocabulary owns the document. A vocabulary that defines a Type SHOULD document its expected properties and children so independent implementations can interpret it.
+
+        ProtocolBindingExtension
+            Type: Section
+            Role: Content
+            Caption: 5.5 Protocol Binding as Extension
+
+            Text
+                Content: The STF core defines no transport. An application vocabulary MAY bind STF to a transport (HTTP, WebSocket, a file, an IPC channel) and define how Intents are submitted and Events delivered. Such bindings are extensions, not part of the STF core. The core only reserves the structural space: an object MAY carry Actions, an action MAY be addressed by Id, and an Event object MAY appear as a top-level object. The vocabulary specifies the concrete protocol.
+
+        ConformanceNote
+            Type: Section
+            Role: Content
+            Caption: 5.6 Conformance of Extensions
+
+            Text
+                Content: An implementation that extends STF remains conformant to the STF core if it (a) produces and parses STF per §2, (b) honors the Object Model (§3) and Trust Model (§4), and (c) does not violate the Extensibility Principle (§5.1). Conformance to a specific application vocabulary is claimed separately by that vocabulary's own profile system.
+    DocumentStructure
+        Type: Section
+        Role: Content
+        Caption: 6. Document Structure and Conformance
+
+        Text
+            Content: This section defines the minimum structure every conformant STF document MUST have, and summarizes what it means to conform to the STF core.
+
+        RequiredTopLevelObjects
+            Type: Section
+            Role: Content
+            Caption: 6.1 Required Top-Level Objects
+
+            Text
+                Content: A valid STF core document has exactly two required top-level (depth=0) objects.
+
+            RequiredObject
+                Type: Text
+                Caption: Context
+                Content: Required — exactly one. Document metadata. Carries the meta-block: DocumentVersion, GrammarVersion, Language, and optionally Document (see §6.2).
+
+            RequiredObject
+                Type: Text
+                Caption: Page
+                Content: Required — exactly one. Document content — the root of the semantic tree.
+
+            Text
+                Content: The order of top-level objects is not prescribed, but the recommended order is Context, then Page. An application vocabulary MAY define additional top-level objects (for example a protocol layer MAY add Events, Application, or Footer) — these are extensions, not part of the STF core.
+
+        MetaBlock
+            Type: Section
+            Role: Content
+            Caption: 6.2 Meta-Block (Context)
+
+            Text
+                Content: The Context object carries the document's self-description. The STF core defines the following meta properties.
+
+            MetaProp
+                Type: Text
+                Caption: DocumentVersion
+                Content: REQUIRED. Version of the document itself, per SemVer (MAJOR.MINOR.PATCH). Example: 0.1.0.
+
+            MetaProp
+                Type: Text
+                Caption: GrammarVersion
+                Content: REQUIRED. Version of the STF grammar the document is written in. Example: 1.0.1.
+
+            MetaProp
+                Type: Text
+                Caption: Language
+                Content: RECOMMENDED. Primary natural language of the document content. Example: en.
+
+            MetaProp
+                Type: Text
+                Caption: Document
+                Content: OPTIONAL. Document title or identifier, for self-identification of the STF document.
+
+            Text
+                Content: The STF core defines no ProtocolVersion field — the core specifies no transport. An application vocabulary that defines a protocol SHOULD declare its own protocol version within its extension of the Context block (for example via a vendor property or an application-defined child), kept separate from DocumentVersion and GrammarVersion.
+
+        SelfHosting
+            Type: Section
+            Role: Content
+            Caption: 6.3 Self-Hosting
+
+            Text
+                Content: A specification written in STF MUST be a valid STF document under its own grammar (§2). This document is self-hosting: it is written in the format it defines. The canonical serialization rules (§2.0) and the structural trust boundary (§4) apply to the specification itself.
+
+        ConformanceCore
+            Type: Section
+            Role: Content
+            Caption: 6.4 Conformance to the STF Core
+
+            Text
+                Content: A conformant STF core implementation MUST:
+
+            ConformanceItem
+                Type: Text
+                Caption: Parse
+                Content: Parse and generate valid STF documents per §2, distinguishing SyntaxError from SemanticError (§4.5).
+
+            ConformanceItem
+                Type: Text
+                Caption: Validate
+                Content: Validate the Object Model (§3): required objects, Id uniqueness, field classification.
+
+            ConformanceItem
+                Type: Text
+                Caption: Trust
+                Content: Enforce the structural trust boundary (§4): Origin propagation, privilege lattice, knowledge zones, and rejection or ignoring of Control properties on Untrusted objects.
+
+            ConformanceItem
+                Type: Text
+                Caption: Extend safely
+                Content: Honor the Extensibility Principle (§5.1): extensions do not redefine core semantics.
+
+            Text
+                Content: The STF core does not define a transport, session model, or action vocabulary — those are provided by application vocabularies (§5). An implementation that adds them remains conformant to the core provided it meets the four requirements above.

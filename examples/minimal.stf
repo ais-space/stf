@@ -1,0 +1,23 @@
+Context
+    DocumentVersion: 0.1.0
+    GrammarVersion: 1.0.1
+    Language: en
+
+Page
+    Type: Page
+    Role: Content
+    Section
+        Type: Section
+        Role: Content
+        Text
+            Type: Text
+            Content: Hello, semantic world. This is a minimal valid STF document.
+        Text
+            Type: Text
+            Content: It has a Context block (metadata) and a Page (content). Every object has an ObjectName, a Type, and a Role.
+    Section
+        Type: Section
+        Role: Content
+        Text
+            Type: Text
+            Content: Trust is structural: mark untrusted visitor content with Origin, and keep it inside a UserData zone so it can never carry executable Control properties.

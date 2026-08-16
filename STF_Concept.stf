@@ -1,0 +1,335 @@
+Context
+    DocumentVersion: 0.1.0
+    GrammarVersion: 1.0.1
+    Language: en
+
+Page
+    Type: Page
+    Role: Content
+    Purpose: Concept of the Semantic Text Format (STF) core — why it exists, what it is, and how it relates to application vocabularies such as SIL.
+
+    Introduction
+        Type: Section
+        Role: Content
+        Caption: 1. Introduction
+
+        Text
+            Content: The Semantic Text Format (STF) is a text format for semantic representation. It was born alongside the Semantic Interface Layer (SIL) specification, as the concrete syntax that SIL needed in order to describe interactive applications to intelligent agents. During the development of SIL, it became clear that the format itself — the syntax, the object model, and the structural trust boundary — was more fundamental than its first application. STF is that format, separated from any single use case.
+
+        Text
+            Content: A web page for a human is HTML, CSS, JavaScript. The browser turns them into a visual interface. An STF document is a textual semantic description of structure and meaning — readable by a human, and directly interpretable by a language model without task-specific training, fine-tuning, or system prompts. At the same time it is a formal grammar that a machine can parse deterministically.
+
+    Origin
+        Type: Section
+        Role: Content
+        Caption: 2. Where STF Came From
+
+        Text
+            Content: STF was created while implementing SIL on the AIS Platform website. SIL needed a way to describe an application's interface, navigation, interaction model, and capabilities directly to an agent. The format that resulted proved general: it expressed not just UI, but any structured semantic content. The decision was therefore made to extract the format into its own project — the STF core — and let SIL become one application vocabulary on top of it.
+
+        Text
+            Content: This document and the STF Specification are themselves written in STF. The standard and the example are one: STF is self-hosting.
+
+    Purpose
+        Type: Section
+        Role: Content
+        Caption: 3. Purpose of STF
+
+        Text
+            Content: STF enables structured information to be expressed in a form that is both human-readable and machine-parseable, optimized for direct consumption by intelligent agents. Its objective is not to replace existing technologies (JSON, XML, YAML, HTML) but to complement them with a semantic layer that is unambiguous by structure and safe by construction.
+
+        Text
+            Content: The primary objective can be expressed in a single sentence: enable information to describe itself in a form an intelligent agent can understand directly, without reverse-engineering meaning from presentation or behavior.
+
+    Vision
+        Type: Section
+        Role: Content
+        Caption: 4. Vision
+
+        Text
+            Content: STF is based on the idea that structured meaning should be expressible as plain text that an agent can read the way a human reads an outline. Indentation shows hierarchy. PascalCase names show structure. Colon-separated properties carry values. No brackets, no quotation marks for keys, no escaping. The format should be so transparent that the structure is obvious at a glance and yet rigid enough that a parser can reject any malformed input without guessing intent.
+
+        Text
+            Content: The long-term vision is that semantic text documents become a natural way for software to communicate structure and intent — not only to agents, but between systems and people. Future software should not merely be usable by agents through scraping and inference; it should be understandable by them through explicit communication.
+
+    Scope
+        Type: Section
+        Role: Content
+        Caption: 5. Scope
+
+        Text
+            Content: STF is intentionally independent of implementation technologies. It is not tied to any programming language, framework, transport protocol, serialization format, AI model, operating system, or browser. It is also independent of any application domain: UI, configuration, documentation, knowledge representation, and agent memory are all valid uses.
+
+        Text
+            Content: The STF core deliberately defines no transport and no application vocabulary. Those are supplied by extensions (see the Specification, §5). SIL is one such extension; others are expected.
+
+    WhatSTFIs
+        Type: Section
+        Role: Content
+        Caption: 6. What STF Is
+
+        Text
+            Content: STF today comprises:
+
+        Bullet
+            Type: Text
+            Caption: Syntax
+            Content: A concrete syntax defined by a formal EBNF grammar. Indentation-based (4 spaces), PascalCase object names, colon-separated properties. A model reads it like a human reads an outline.
+
+        Bullet
+            Type: Text
+            Caption: Object Model
+            Content: Every node has an ObjectName, a Type, a Role, and optionally an Id. Properties are classified as Data, Guidance, or Control. Meaning is explicit; inference is minimized.
+
+        Bullet
+            Type: Text
+            Caption: Trust Model
+            Content: A structural security model. The trust boundary is enforced by the grammar and type system, not by filtering strings. Origin, Knowledge Zones, and a privilege lattice make untrusted content data by construction.
+
+        Bullet
+            Type: Text
+            Caption: Extension Mechanism
+            Content: Vendor properties (reverse-domain prefix) and application vocabularies let any domain add Types, Roles, Actions, and transports without redefining core semantics.
+
+    DesignPhilosophy
+        Type: Section
+        Role: Content
+        Caption: 7. Design Philosophy
+
+        Text
+            Content: STF does not attempt to teach agents how to use software. Instead, it enables software (and any structured content) to explain itself. Understanding emerges from explicit communication, not from observation and reconstruction. The role of STF is communication, not visualization.
+
+    FundamentalPrinciples
+        Type: Section
+        Role: Content
+        Caption: 8. Fundamental Principles
+
+        Text
+            Content: Every feature in the format supports these principles. If a proposed extension conflicts with them, the principles take precedence.
+
+        Principle
+            Type: Text
+            Caption: 8.1 Self-Description
+            Content: Content should be able to describe itself. An agent should not be required to reconstruct information that already exists in the structure.
+
+        Principle
+            Type: Text
+            Caption: 8.2 Semantic First
+            Content: STF describes meaning before presentation. Visual appearance belongs to a different layer; STF communicates concepts.
+
+        Principle
+            Type: Text
+            Caption: 8.3 Deterministic Interpretation
+            Content: STF eliminates ambiguity where structure can carry meaning. The grammar, object model, and trust model are unambiguous and machine-parseable by design. Natural-language fields (Purpose, Description) remain probabilistic — STF scopes them clearly so agents know what is structural and what is advisory.
+
+        Principle
+            Type: Text
+            Caption: 8.4 Structural Security
+            Content: The trust boundary is enforced by the grammar and type system, not by filtering dangerous-looking strings. UserContent is data by construction. Knowledge Zones separate trusted system content from untrusted visitor content. The Origin system tracks provenance with a fail-closed default (Unknown = Untrusted).
+
+        Principle
+            Type: Text
+            Caption: 8.5 Extensibility
+            Content: No format can anticipate every use case. STF provides a stable semantic core while allowing application-defined extensions and vendor properties. Extensions MUST NOT redefine core semantics.
+
+        Principle
+            Type: Text
+            Caption: 8.6 Technology Neutrality
+            Content: STF must not depend on any specific programming language, framework, transport protocol, serialization format, AI model, operating system, or browser. The format describes semantics, not implementation.
+
+        Principle
+            Type: Text
+            Caption: 8.7 Agent-Centric Reading
+            Content: STF is designed so that an intelligent agent can consume it directly. Every structural choice favors explicit, low-ambiguity communication over brevity won through convention.
+
+    ThreeLayerArchitecture
+        Type: Section
+        Role: Content
+        Caption: 9. The Three-Layer Architecture
+
+        Text
+            Content: STF is defined as three layers, only the first two of which belong to the core. The third is an application concern.
+
+        Layer
+            Type: Section
+            Role: Content
+            Caption: Layer 1 — STF Syntax
+            Purpose: How to write and read. Text format, grammar, parsing rules. A parser validates syntax without knowing what "Button" means. This layer is the STF core.
+
+        Layer
+            Type: Section
+            Role: Content
+            Caption: Layer 2 — Semantic Vocabulary (core)
+            Purpose: What it means. Types, Roles, States, Actions, Origin. The core object model and trust model are standardized; applications extend them. A server routes an action without knowing what Expand does to a Menu. This layer is the STF core.
+
+        Layer
+            Type: Section
+            Role: Content
+            Caption: Layer 3 — Application Protocol (extension)
+            Purpose: How to interact. Transport, sessions, action submission, event delivery, discovery. This layer is defined by an application vocabulary (for example SIL over HTTP). It is NOT part of the STF core; the core only reserves the structural space for it.
+
+        Text
+            Content: Separation of concerns: a parser validates STF without knowing semantics. A consumer interprets capabilities without knowing implementation details. A different transport can use the same syntax and vocabulary — only the protocol layer changes.
+
+    ThoughtExperiment
+        Type: Section
+        Role: Content
+        Caption: 10. A Thought Experiment
+
+        Text
+            Content: Imagine an intelligent agent receiving a document for the first time. No prior knowledge. No screenshots. No training.
+
+        Text
+            Content: The agent's first questions are simple: What is this? What can I do here? What can I not do? Which actions are available? Which require authorization? What happens after each action?
+
+        Text
+            Content: Every major concept in STF answers one of these questions. If a concept does not improve an agent's (or a system's) understanding of the content, it does not belong in the core format.
+
+    STFIsNot
+        Type: Section
+        Role: Content
+        Caption: 11. STF Is Not
+
+        Text
+            Content: Defining what STF is not is as important as defining what it is.
+
+        Text
+            Content: STF is NOT a programming language or scripting environment. It is NOT a replacement for JSON, XML, or YAML as a data serialization format — it is optimized for semantic readability by agents, not for arbitrary machine-to-machine data. It is NOT a visual interface, an automation protocol, a testing framework, a page description language, or an AI prompt format. It does not define authentication, sessions, or transport. Those are application vocabularies built on top of STF.
+
+    ConceptualArchitecture
+        Type: Section
+        Role: Content
+        Caption: 12. Conceptual Architecture
+
+        Text
+            Content: STF sits between raw data and a consumer. A producer turns an application model or knowledge source into an STF document; a consumer reads structure and meaning directly. Neither the producer's internals nor the consumer's reasoning are part of the format. Both depend only on the STF document.
+
+        Text
+            Content: Application Model or Knowledge Source  ->  STF Document (core)  ->  Intelligent Agent or System. The format is the contract; the layers above and below it are free to vary.
+
+    CoreSemanticModelInPractice
+        Type: Section
+        Role: Content
+        Caption: 13. Core Semantic Model in Practice
+
+        Text
+            Content: STF defines the following core concepts. The table illustrates them through what they enable.
+
+        ConceptTable
+            Type: Section
+            Role: Content
+            Caption: Core concepts
+
+            Row
+                Type: Text
+                Caption: Object
+                Content: A named structural unit with Type, Role, properties, children. What is this?
+
+            Row
+                Type: Text
+                Caption: Type / Role
+                Content: Structural classification and semantic purpose. What kind of thing, and why does it exist?
+
+            Row
+                Type: Text
+                Caption: Id
+                Content: Stable addressable identifier. Which object do I act on?
+
+            Row
+                Type: Text
+                Caption: State
+                Content: Current state. What condition is it in?
+
+            Row
+                Type: Text
+                Caption: Actions
+                Content: Declared available interactions. What can I do?
+
+            Row
+                Type: Text
+                Caption: Origin
+                Content: Data provenance. Can I trust it?
+
+            Row
+                Type: Text
+                Caption: Knowledge Zones
+                Content: Is this system content or visitor content?
+
+            Row
+                Type: Text
+                Caption: Expects
+                Content: What parameters does this action require?
+
+        Text
+            Content: Each concept exists because a consumer needs to know it. An application vocabulary adds concrete values (Button, Expand, ProductCard) without changing these core roles.
+
+    Example
+        Type: Section
+        Role: Content
+        Caption: 14. Example
+
+        Text
+            Content: A minimal STF document illustrating the core structure:
+
+        Example
+            Type: Text
+            Caption: Minimal STF document
+            Content: "Context backslash-n    DocumentVersion: 0.1.0 backslash-n    GrammarVersion: 1.0.1 backslash-n    Language: en backslash-n backslash-n Page backslash-n    Type: Page backslash-n    Role: Content backslash-n    Section backslash-n        Type: Section backslash-n        Role: Content backslash-n        Text backslash-n            Type: Text backslash-n            Content: Hello, semantic world."
+
+    FutureEvolution
+        Type: Section
+        Role: Content
+        Caption: 15. Future Evolution
+
+        Text
+            Content: STF is a published format in its early stages. The syntax, core object model, and trust model are intended to be stable. Planned for future versions:
+
+        Bullet
+            Type: Text
+            Caption: Streamable STF
+            Content: Progressive rendering, incremental updates for very large documents.
+
+        Bullet
+            Type: Text
+            Caption: Cross-document fragment identifiers
+            Content: Addressing an object across documents by fragment.
+
+        Bullet
+            Type: Text
+            Caption: Binary STF encoding
+            Content: A compact encoding for minimal token usage in agent contexts.
+
+        Bullet
+            Type: Text
+            Caption: Formal conformance test suite
+            Content: Machine-readable tests for parsers and validators.
+
+        Text
+            Content: The format is developed in the open. Application vocabularies (such as SIL) evolve on their own timelines; the STF core evolves separately and conservatively.
+
+    GuidingPrinciple
+        Type: Section
+        Role: Content
+        Caption: 16. Guiding Principle
+
+        Text
+            Content: Every architectural decision within STF should be evaluated against one fundamental question:
+
+        Quote
+            Type: Text
+            Caption: Criterion
+            Content: Does this make structured meaning easier for an intelligent agent to understand?
+
+        Text
+            Content: If yes — the proposal aligns with the purpose of STF. If no — reconsider, regardless of technical elegance.
+
+    Conclusion
+        Type: Section
+        Role: Content
+        Caption: 17. Conclusion
+
+        Text
+            Content: For decades, structured data has been designed for machines to process and prose for humans to read. The emergence of intelligent agents introduces a participant that fits neither category cleanly: it reads text, but reasons over structure. STF is a format built for that participant — plain text that is unambiguous by grammar and safe by construction.
+
+        Text
+            Content: STF introduces no new business logic and changes no application behavior. It enables structured content to express what it already knows about itself in a form that intelligent agents can understand directly. It is an open format, ready for the community to adopt, implement, and extend — with SIL as its first, and furthest-developed, application vocabulary.
