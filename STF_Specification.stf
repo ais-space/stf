@@ -1,5 +1,5 @@
 Context
-    DocumentVersion: 0.1.0
+    DocumentVersion: 0.1.1
     GrammarVersion: 1.0.1
     Language: en
 
@@ -606,7 +606,7 @@ Page
                 PropertyEntry
                     Type: Text
                     Caption: Format
-                    Content: Data type hint for values. Values: string, boolean, number, datetime, url, email, integer, date, uuid, enum.
+                    Content: Data type hint for values. All STF property values are transmitted as text; Format provides a type hint for programmatic interpretation. Format is optional — when absent, string is assumed. Implementations SHOULD respect Format when validating input. Values: string, boolean, number, datetime, url, email, integer, date, uuid, enum.
 
                 PropertyEntry
                     Type: Text
@@ -667,6 +667,41 @@ Page
                     Type: Text
                     Caption: Document
                     Content: Document title or identifier. Used in Context for self-identification of the STF document itself. Optional.
+
+                FormatValues
+                    Type: Section
+                    Role: Content
+                    Caption: Format values and examples
+
+                    Text
+                        Content: string — Default if Format is absent. Example: SIL is great.
+
+                    Text
+                        Content: boolean — Lowercase only. Example: true, false.
+
+                    Text
+                        Content: number — Integer or decimal, dot separator. Example: 42, 3.14, -10.
+
+                    Text
+                        Content: datetime — ISO 8601, UTC. Example: 2026-08-07T12:00:00Z.
+
+                    Text
+                        Content: url — Fully qualified URL. Example: https://example.com.
+
+                    Text
+                        Content: email — RFC 5322 addr-spec. Example: user@example.com.
+
+                    Text
+                        Content: integer — Whole number, no fractional part. Example: 42, -10.
+
+                    Text
+                        Content: date — ISO 8601 date only. Example: 2026-08-07.
+
+                    Text
+                        Content: uuid — RFC 9562 UUID. Example: 550e8400-e29b-41d4-a716-446655440000.
+
+                    Text
+                        Content: enum — Value must be one of the declared Options.
 
             FieldClassification
                 Type: Section

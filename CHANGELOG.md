@@ -4,6 +4,13 @@ All notable changes to the STF (Semantic Text Format) core specification.
 
 ---
 
+## v0.1.1 (2026-08-16) — §3.2.1 Format semantics completed
+
+### Corrections
+- §3.2.1 `Format` property: restored the normative behavior (all values transmitted as text; `string` assumed when Format is absent; implementations SHOULD respect Format when validating input) and the per-format examples (string, boolean, number, datetime, url, email, integer, date, uuid / RFC 9562, enum). This material is core STF semantics and was omitted when the core was first extracted from SIL; it is not SIL-specific.
+
+---
+
 ## v0.1.0 (2026-08-16) — First Core Release (extracted from SIL)
 
 ### Core
