@@ -10,6 +10,8 @@
 
 STF (Semantic Text Format) is a text format for semantic representation. It was created alongside the Semantic Interface Layer (SIL) specification as the concrete syntax SIL needed to describe interactive applications to intelligent agents — and then separated into its own project because the format proved more fundamental than its first application.
 
+SIL (Semantic Interface Layer) is the first application vocabulary built on STF. It defines how web applications expose their state, capabilities, actions, and events to agents. See the [SIL specification](https://github.com/ais-space/sil) for the web-facing protocol.
+
 STF is:
 
 - **Text-based and hierarchical** — indentation shows structure, PascalCase names show objects, colon-separated properties carry values. No brackets, no quotation marks for keys, no escape sequences.
